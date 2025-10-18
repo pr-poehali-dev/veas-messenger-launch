@@ -100,5 +100,27 @@
   body {
     @apply bg-background text-foreground;
     font-family: "Rubik", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@layer utilities {
+  @media (max-width: 768px) {
+    .md\:hidden {
+      display: none !important;
+    }
+  }
+
+  .touch-action-manipulation {
+    touch-action: manipulation;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
   }
 }
