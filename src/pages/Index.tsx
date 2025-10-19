@@ -66,6 +66,7 @@ export default function Index() {
   const [newMessage, setNewMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'chats' | 'calls' | 'contacts' | 'profile' | 'settings'>('chats');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showChatView, setShowChatView] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [importedContacts, setImportedContacts] = useState(false);
   const [isCallActive, setIsCallActive] = useState(false);
@@ -409,7 +410,15 @@ export default function Index() {
 
   const renderProfile = () => (
     <div className="flex-1 overflow-hidden flex flex-col">
-      <div className="p-4 border-b border-border">
+      <div className="p-4 border-b border-border flex items-center gap-3">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="md:hidden h-10 w-10" 
+          onClick={() => setActiveTab('chats')}
+        >
+          <Icon name="ArrowLeft" size={20} />
+        </Button>
         <h2 className="text-xl font-bold">Профиль</h2>
       </div>
       <ScrollArea className="flex-1">
@@ -499,7 +508,15 @@ export default function Index() {
 
   const renderSettings = () => (
     <div className="flex-1 overflow-hidden flex flex-col">
-      <div className="p-4 border-b border-border">
+      <div className="p-4 border-b border-border flex items-center gap-3">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="md:hidden h-10 w-10" 
+          onClick={() => setActiveTab('chats')}
+        >
+          <Icon name="ArrowLeft" size={20} />
+        </Button>
         <h2 className="text-xl font-bold">Настройки</h2>
       </div>
       <ScrollArea className="flex-1">
@@ -627,7 +644,17 @@ export default function Index() {
       return (
         <div className="flex-1 overflow-hidden flex flex-col">
           <div className="p-4 border-b border-border">
-            <h2 className="text-xl font-bold mb-4">Контакты</h2>
+            <div className="flex items-center gap-3 mb-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="md:hidden h-10 w-10" 
+                onClick={() => setActiveTab('chats')}
+              >
+                <Icon name="ArrowLeft" size={20} />
+              </Button>
+              <h2 className="text-xl font-bold">Контакты</h2>
+            </div>
             <div className="relative">
               <Icon name="Search" size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
               <Input placeholder="Поиск контактов..." className="pl-10" />
@@ -667,7 +694,15 @@ export default function Index() {
     if (activeTab === 'calls') {
       return (
         <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="p-4 border-b border-border">
+          <div className="p-4 border-b border-border flex items-center gap-3">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="md:hidden h-10 w-10" 
+              onClick={() => setActiveTab('chats')}
+            >
+              <Icon name="ArrowLeft" size={20} />
+            </Button>
             <h2 className="text-xl font-bold">Звонки</h2>
           </div>
           <ScrollArea className="flex-1 p-4">
@@ -699,7 +734,7 @@ export default function Index() {
 
     return (
       <>
-        <div className="w-full md:w-96 border-r border-border flex flex-col">
+        <div className={`w-full md:w-96 border-r border-border flex flex-col ${showChatView ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-border">
             <div className="flex items-center justify-between mb-4 animate-fade-in">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
@@ -725,16 +760,17 @@ export default function Index() {
             {filteredChats.map((chat, idx) => (
               <div
                 key={chat.id}
-                onClick={() => setActiveChat(chat)}
-                className={`p-3 md:p-4 cursor-pointer transition-all hover:bg-muted/50 border-b border-border active:scale-95 ${
-                  activeChat?.id === chat.id ? 'bg-muted' : ''
-                }`}
+                onClick={() => {
+                  setActiveChat(chat);
+                  setShowChatView(true);
+                }}
+                className="p-4 cursor-pointer transition-all hover:bg-muted/50 border-b border-border active:bg-muted"
                 style={{ animationDelay: `${idx * 0.03}s` }}
               >
                 <div className="flex items-start gap-3">
                   <div className="relative shrink-0">
-                    <Avatar className="h-11 w-11 md:h-12 md:w-12">
-                      <AvatarFallback className="text-xl md:text-2xl">{chat.avatar}</AvatarFallback>
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback className="text-2xl">{chat.avatar}</AvatarFallback>
                     </Avatar>
                     {chat.online && (
                       <div className="absolute bottom-0 right-0 h-3 w-3 bg-accent rounded-full border-2 border-background animate-pulse" />
@@ -742,11 +778,11 @@ export default function Index() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold truncate text-sm md:text-base">{chat.name}</h3>
+                      <h3 className="font-semibold truncate">{chat.name}</h3>
                       <span className="text-xs text-muted-foreground shrink-0">{chat.time}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs md:text-sm text-muted-foreground truncate flex-1">
+                      <p className="text-sm text-muted-foreground truncate flex-1">
                         {chat.encrypted && <Icon name="Lock" size={12} className="inline mr-1" />}
                         {chat.lastMessage}
                       </p>
@@ -761,16 +797,24 @@ export default function Index() {
           </ScrollArea>
         </div>
 
-        <div className="flex-1 flex flex-col">
+        <div className={`flex-1 flex flex-col ${showChatView ? 'flex' : 'hidden md:flex'}`}>
           {activeChat ? (
             <>
-              <div className="p-3 md:p-4 border-b border-border flex items-center justify-between animate-fade-in">
-                <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
-                  <Avatar className="h-9 w-9 md:h-10 md:w-10 shrink-0">
-                    <AvatarFallback className="text-lg md:text-xl">{activeChat.avatar}</AvatarFallback>
+              <div className="p-4 border-b border-border flex items-center justify-between animate-fade-in">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="md:hidden h-10 w-10 shrink-0" 
+                    onClick={() => setShowChatView(false)}
+                  >
+                    <Icon name="ArrowLeft" size={20} />
+                  </Button>
+                  <Avatar className="h-10 w-10 shrink-0">
+                    <AvatarFallback className="text-xl">{activeChat.avatar}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
-                    <h2 className="font-semibold text-sm md:text-base truncate">{activeChat.name}</h2>
+                    <h2 className="font-semibold truncate">{activeChat.name}</h2>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       {activeChat.online ? (
                         <><div className="h-2 w-2 bg-accent rounded-full animate-pulse" /> онлайн</>
@@ -780,21 +824,21 @@ export default function Index() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 md:gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <Badge variant="outline" className="gap-1 text-xs hidden md:flex">
                     <Icon name="ShieldCheck" size={14} />
                     Зашифровано
                   </Badge>
                   {activeChat.phone && (
-                    <Button variant="ghost" size="icon" onClick={() => startCall(activeChat)} className="h-9 w-9 md:h-10 md:w-10">
+                    <Button variant="ghost" size="icon" onClick={() => startCall(activeChat)} className="h-10 w-10">
                       <Icon name="Phone" size={18} />
                     </Button>
                   )}
                 </div>
               </div>
 
-              <ScrollArea className="flex-1 p-3 md:p-4">
-                <div className="space-y-3 md:space-y-4 max-w-3xl mx-auto">
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-3">
                   {messages.map((msg, idx) => (
                     <div
                       key={msg.id}
@@ -802,13 +846,13 @@ export default function Index() {
                       style={{ animationDelay: `${idx * 0.05}s` }}
                     >
                       <div
-                        className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-3 py-2 md:px-4 md:py-2 ${
+                        className={`max-w-[80%] rounded-2xl px-4 py-2 ${
                           msg.sent
                             ? 'bg-gradient-to-r from-primary to-secondary text-primary-foreground'
                             : 'bg-muted text-foreground'
                         }`}
                       >
-                        <p className="text-sm break-words">{msg.text}</p>
+                        <p className="break-words">{msg.text}</p>
                         <div className="flex items-center gap-1 justify-end mt-1">
                           <span className="text-xs opacity-70">{msg.time}</span>
                           {msg.encrypted && <Icon name="Lock" size={10} className="opacity-70" />}
@@ -819,20 +863,20 @@ export default function Index() {
                 </div>
               </ScrollArea>
 
-              <div className="p-3 md:p-4 border-t border-border animate-slide-up safe-bottom">
-                <div className="flex items-center gap-2 max-w-3xl mx-auto">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10 shrink-0">
-                    <Icon name="Paperclip" size={18} />
+              <div className="p-4 border-t border-border animate-slide-up safe-bottom">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0">
+                    <Icon name="Paperclip" size={20} />
                   </Button>
                   <Input
                     placeholder="Сообщение..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                    className="flex-1 text-sm md:text-base"
+                    className="flex-1"
                   />
-                  <Button onClick={sendMessage} size="icon" className="bg-gradient-to-r from-primary to-secondary h-9 w-9 md:h-10 md:w-10 shrink-0">
-                    <Icon name="Send" size={18} />
+                  <Button onClick={sendMessage} size="icon" className="bg-gradient-to-r from-primary to-secondary h-10 w-10 shrink-0">
+                    <Icon name="Send" size={20} />
                   </Button>
                 </div>
               </div>
