@@ -1,0 +1,40 @@
+{
+  "tests": [
+    {
+      "name": "Get user chats",
+      "method": "GET",
+      "path": "/",
+      "headers": {
+        "X-Session-Token": "test-session-token"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "chats": "array"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Send message",
+      "method": "POST",
+      "path": "/",
+      "headers": {
+        "X-Session-Token": "test-session-token"
+      },
+      "body": {
+        "action": "send",
+        "chat_id": 1,
+        "content": "Hello!"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "message": {
+          "id": "number",
+          "content": "string"
+        }
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

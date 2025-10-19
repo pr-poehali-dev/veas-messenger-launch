@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { api, getSessionToken, setSessionToken, clearSessionToken, getCurrentUser, setCurrentUser, clearCurrentUser } from '@/lib/api';
 
 interface Chat {
   id: number;
@@ -74,6 +75,7 @@ export default function Index() {
   const [verificationCode, setVerificationCode] = useState('');
   const [showVerification, setShowVerification] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userChats, setUserChats] = useState<Chat[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: '',
     phone: '',
@@ -90,6 +92,46 @@ export default function Index() {
     autoDownload: false,
   });
   const { toast } = useToast();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const sessionToken = getSessionToken();
+      const savedUser = getCurrentUser();
+      
+      if (sessionToken && savedUser) {
+        setIsAuthenticated(true);
+        setShowPhoneInput(false);
+        setUserProfile({
+          name: savedUser.username,
+          phone: savedUser.phone_number,
+          bio: savedUser.status || '',
+          avatar: savedUser.avatar_url || '👤'
+        });
+        loadUserChats();
+      }
+    };
+    checkAuth();
+  }, []);
+
+  const loadUserChats = async () => {
+    const sessionToken = getSessionToken();
+    if (!sessionToken) return;
+
+    const result = await api.messages.getChats(sessionToken);
+    if (result.success && result.chats) {
+      const formattedChats: Chat[] = result.chats.map((chat: any) => ({
+        id: chat.id,
+        name: chat.name || 'Чат',
+        lastMessage: chat.last_message || '',
+        time: chat.last_message_time ? new Date(chat.last_message_time).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '',
+        unread: chat.unread_count || 0,
+        online: false,
+        avatar: chat.avatar_url || '👤',
+        encrypted: true
+      }));
+      setUserChats(formattedChats);
+    }
+  };
 
   useEffect(() => {
     if (isAuthenticated && !importedContacts) {
@@ -110,7 +152,7 @@ export default function Index() {
     return () => clearInterval(interval);
   }, [isCallActive]);
 
-  const sendVerificationCode = () => {
+  const sendVerificationCode = async () => {
     if (phoneNumber.length < 10) {
       toast({
         title: "Ошибка",
@@ -120,22 +162,31 @@ export default function Index() {
       return;
     }
     
-    setShowVerification(true);
-    toast({
-      title: "Код отправлен",
-      description: `Код подтверждения отправлен на ${phoneNumber}`,
-    });
+    const result = await api.auth.sendCode(phoneNumber);
+    if (result.success) {
+      setShowVerification(true);
+      toast({
+        title: "Код отправлен",
+        description: result.message,
+      });
+    }
   };
 
-  const verifyCode = () => {
-    if (verificationCode === '1234' || verificationCode.length === 4) {
+  const verifyCode = async () => {
+    const result = await api.auth.verifyCode(phoneNumber, verificationCode);
+    if (result.success) {
+      setSessionToken(result.session_token);
+      setCurrentUser(result.user);
       setIsAuthenticated(true);
       setShowPhoneInput(false);
       setUserProfile({
         ...userProfile,
-        phone: phoneNumber,
-        name: 'Новый пользователь'
+        phone: result.user.phone_number,
+        name: result.user.username,
+        bio: result.user.status,
+        avatar: result.user.avatar_url || '👤'
       });
+      loadUserChats();
       toast({
         title: "Добро пожаловать!",
         description: "Вы успешно вошли в veas",
@@ -143,7 +194,7 @@ export default function Index() {
     } else {
       toast({
         title: "Неверный код",
-        description: "Попробуйте еще раз",
+        description: result.error || "Попробуйте еще раз",
         variant: "destructive"
       });
     }
@@ -195,21 +246,28 @@ export default function Index() {
     setCallDuration(0);
   };
 
-  const filteredChats = mockChats.filter(chat =>
+  const displayChats = userChats.length > 0 ? userChats : mockChats;
+  const filteredChats = displayChats.filter(chat =>
     chat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const sendMessage = () => {
-    if (newMessage.trim()) {
-      const newMsg: Message = {
-        id: messages.length + 1,
-        text: newMessage,
-        time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-        sent: true,
-        encrypted: true,
-      };
-      setMessages([...messages, newMsg]);
-      setNewMessage('');
+  const sendMessage = async () => {
+    if (newMessage.trim() && activeChat) {
+      const sessionToken = getSessionToken();
+      if (!sessionToken) return;
+
+      const result = await api.messages.sendMessage(sessionToken, activeChat.id, newMessage);
+      if (result.success) {
+        const newMsg: Message = {
+          id: result.message.id,
+          text: result.message.content,
+          time: new Date(result.message.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+          sent: true,
+          encrypted: true,
+        };
+        setMessages([...messages, newMsg]);
+        setNewMessage('');
+      }
     }
   };
 
@@ -224,6 +282,18 @@ export default function Index() {
     toast({
       title: "Профиль обновлен",
       description: "Ваши данные успешно сохранены",
+    });
+  };
+
+  const handleLogout = () => {
+    clearSessionToken();
+    clearCurrentUser();
+    setIsAuthenticated(false);
+    setShowPhoneInput(true);
+    setUserChats([]);
+    toast({
+      title: "Вы вышли",
+      description: "До скорой встречи!",
     });
   };
 
@@ -491,7 +561,7 @@ export default function Index() {
               <Icon name="Info" size={18} className="mr-2" />
               О приложении
             </Button>
-            <Button variant="destructive" className="w-full justify-start">
+            <Button variant="destructive" className="w-full justify-start" onClick={handleLogout}>
               <Icon name="LogOut" size={18} className="mr-2" />
               Выйти из аккаунта
             </Button>

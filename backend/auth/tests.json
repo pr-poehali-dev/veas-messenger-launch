@@ -1,0 +1,39 @@
+{
+  "tests": [
+    {
+      "name": "Send verification code",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "send_code",
+        "phone_number": "+79991234567"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "message": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Verify code and login",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "verify_code",
+        "phone_number": "+79991234567",
+        "code": "123456"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "session_token": "string",
+        "user": {
+          "id": "number",
+          "phone_number": "string"
+        }
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
