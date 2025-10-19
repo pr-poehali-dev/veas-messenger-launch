@@ -39,7 +39,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             if action == 'send_code':
                 phone_number = body_data.get('phone_number')
                 
-                code = ''.join(random.choices(string.digits, k=6))
+                code = ''.join(random.choices(string.digits, k=4))
                 expires_at = datetime.now() + timedelta(minutes=5)
                 
                 with conn.cursor() as cur:
@@ -57,7 +57,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     },
                     'body': json.dumps({
                         'success': True,
-                        'message': f'Code sent: {code}'
+                        'message': f'Код: {code}'
                     }),
                     'isBase64Encoded': False
                 }
