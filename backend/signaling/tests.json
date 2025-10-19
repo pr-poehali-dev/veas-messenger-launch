@@ -1,0 +1,18 @@
+{
+  "tests": [
+    {
+      "name": "Get call signals",
+      "method": "GET",
+      "path": "/",
+      "headers": {
+        "X-Session-Token": "test-token"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "signals": "array"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

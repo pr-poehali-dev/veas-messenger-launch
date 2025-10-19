@@ -2,6 +2,7 @@ const API_BASE = 'https://functions.poehali.dev';
 
 const AUTH_URL = '3c8cdd77-9aa5-42dc-9fb7-5d598252a04c';
 const MESSAGES_URL = '77153e37-44c4-447f-8000-09f09dfc829b';
+const SIGNALING_URL = '861f2fbd-00c4-4dc1-80eb-11c30a34c596';
 
 export const api = {
   auth: {
@@ -84,6 +85,16 @@ export const api = {
           action: 'create_chat',
           participant_phone: participantPhone
         })
+      });
+      return response.json();
+    }
+  },
+
+  signaling: {
+    pollSignals: async (sessionToken: string) => {
+      const response = await fetch(`${API_BASE}/${SIGNALING_URL}`, {
+        method: 'GET',
+        headers: { 'X-Session-Token': sessionToken }
       });
       return response.json();
     }

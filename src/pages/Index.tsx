@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Icon from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { api, getSessionToken, setSessionToken, clearSessionToken, getCurrentUser, setCurrentUser, clearCurrentUser } from '@/lib/api';
+import { WebRTCCall } from '@/lib/webrtc';
 
 interface Chat {
   id: number;
@@ -91,6 +92,10 @@ export default function Index() {
     darkMode: true,
     autoDownload: false,
   });
+  const [isMuted, setIsMuted] = useState(false);
+  const [currentCall, setCurrentCall] = useState<WebRTCCall | null>(null);
+  const [callingUserId, setCallingUserId] = useState<number | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -226,17 +231,53 @@ export default function Index() {
     }, 1500);
   };
 
-  const startCall = (chat: Chat) => {
+  const startCall = async (chat: Chat) => {
+    const sessionToken = getSessionToken();
+    if (!sessionToken) return;
+
+    setActiveChat(chat);
     setIsCallActive(true);
     setCallDuration(0);
-    toast({
-      title: "Звонок начат",
-      description: `Звоним ${chat.name}...`,
-    });
+    setCallingUserId(chat.id);
+
+    const call = new WebRTCCall(sessionToken, chat.id);
+    setCurrentCall(call);
+
+    try {
+      await call.startCall(
+        (remoteStream) => {
+          if (remoteAudioRef.current) {
+            remoteAudioRef.current.srcObject = remoteStream;
+            remoteAudioRef.current.play();
+          }
+        },
+        () => {
+          setIsCallActive(false);
+          setCurrentCall(null);
+        }
+      );
+
+      toast({
+        title: "Звонок начат",
+        description: `Звоним ${chat.name}...`,
+      });
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось начать звонок. Проверьте доступ к микрофону.",
+        variant: "destructive"
+      });
+      setIsCallActive(false);
+    }
   };
 
   const endCall = () => {
+    if (currentCall) {
+      currentCall.endCall();
+    }
     setIsCallActive(false);
+    setCurrentCall(null);
+    setIsMuted(false);
     const minutes = Math.floor(callDuration / 60);
     const seconds = callDuration % 60;
     toast({
@@ -244,6 +285,13 @@ export default function Index() {
       description: `Длительность: ${minutes}:${seconds.toString().padStart(2, '0')}`,
     });
     setCallDuration(0);
+  };
+
+  const toggleMute = () => {
+    if (currentCall) {
+      const muted = currentCall.toggleMute();
+      setIsMuted(muted);
+    }
   };
 
   const displayChats = userChats.length > 0 ? userChats : mockChats;
@@ -840,8 +888,13 @@ export default function Index() {
               {formatCallDuration()}
             </Badge>
             <div className="flex items-center justify-center gap-3 md:gap-4 mt-6 md:mt-8">
-              <Button variant="ghost" size="icon" className="h-12 w-12 md:h-14 md:w-14">
-                <Icon name="Mic" size={20} />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-12 w-12 md:h-14 md:w-14"
+                onClick={toggleMute}
+              >
+                <Icon name={isMuted ? "MicOff" : "Mic"} size={20} />
               </Button>
               <Button onClick={endCall} size="icon" className="h-14 w-14 md:h-16 md:w-16 bg-destructive hover:bg-destructive/90 rounded-full">
                 <Icon name="PhoneOff" size={24} />
@@ -850,6 +903,7 @@ export default function Index() {
                 <Icon name="Volume2" size={20} />
               </Button>
             </div>
+            <audio ref={remoteAudioRef} autoPlay />
           </div>
         </DialogContent>
       </Dialog>
